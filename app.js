@@ -26,35 +26,47 @@ recognition.onresult = (event) => {
   respond(transcript);
 };
 
-function respond(text) {
-  let reply = "";
+async function respond(text) {
+  statusText.textContent = "Status: Thinking...";
 
-  // SIMPLE “AI” for now
-  if (text.toLowerCase().includes("hello")) {
-    reply = "Hello. I'm Nova. How can I assist you today?";
-  } else if (text.toLowerCase().includes("time")) {
-    reply = "The current time is " + new Date().toLocaleTimeString();
-  } else {
-    reply = "I heard you say " + text;
-  }
+  const res = await fetch("http://localhost:3000/ask", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ message: text }),
+  });
 
-  speak(reply);
+  const data = await res.json();
+  speak(data.reply);
 }
 
-function speak(message) {
-  const speech = new SpeechSynthesisUtterance(message);
+function speak(text) {
+  const utterance = new SpeechSynthesisUtterance(text);
 
-  // Slightly “Teto-inspired” tuning
-  speech.pitch = 1.3;
-  speech.rate = 1.1;
+  const voices = speechSynthesis.getVoices();
 
-  speech.onstart = () => {
+  let selectedVoice =
+    voices.find(v => v.name.includes("Microsoft Aria")) ||
+    voices.find(v => v.name.includes("Microsoft Zira")) ||
+    voices.find(v => v.name.includes("Google US English")) ||
+    voices.find(v => v.lang === "en-US");
+
+  if (selectedVoice) {
+    utterance.voice = selectedVoice;
+  }
+
+  utterance.pitch = 1.1;   
+  utterance.rate = 0.95;  
+  utterance.volume = 1;
+
+  utterance.onstart = () => {
     statusText.textContent = "Status: Speaking...";
   };
 
-  speech.onend = () => {
+  utterance.onend = () => {
     statusText.textContent = "Status: Idle";
   };
 
-  window.speechSynthesis.speak(speech);
+  speechSynthesis.speak(utterance);
 }
